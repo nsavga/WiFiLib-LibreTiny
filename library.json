@@ -4,7 +4,7 @@
   "description": "This is a WiFiClient, WiFiClientSecure (WiFiSSLClient) and a simpler HttpClient library to be used with LibreTiny and RTL8720CF chips. Still under heavy development. Tested on wbr3 chips.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nsavga/RTL8720CF_LibreTiny_WiFiClients"
+    "url": "https://github.com/nsavga/RTL8720CFWiFiLib"
   },
   "frameworks": "arduino",
   "platforms": ["libretiny"],
