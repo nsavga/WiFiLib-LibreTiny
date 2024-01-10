@@ -1,0 +1,24 @@
+{
+    "files.associations": {
+        "platform_time.h": "c",
+        "config.h": "c",
+        "condition_variable": "cpp",
+        "future": "cpp",
+        "*.tcc": "cpp",
+        "netfwd": "cpp",
+        "tuple": "cpp",
+        "uf2ota.h": "c",
+        "array": "cpp",
+        "deque": "cpp",
+        "string": "cpp",
+        "unordered_map": "cpp",
+        "vector": "cpp",
+        "string_view": "cpp",
+        "initializer_list": "cpp",
+        "ranges": "cpp",
+        "regex": "cpp",
+        "lt_ota.h": "c",
+        "fal.h": "c",
+        "functional": "cpp"
+    }
+}
