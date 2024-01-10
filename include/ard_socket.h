@@ -1,6 +1,8 @@
 #ifndef ARD_SOCKET_H
 #define ARD_SOCKET_H
 
+#include <stdint.h>
+
 // int start_server(uint16_t port, uint8_t protMode);
 
 // int start_server_v6(uint16_t port, uint8_t protMode);
