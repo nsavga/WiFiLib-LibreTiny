@@ -8,7 +8,7 @@ Library consists of:
 
 Please check the platformio.ini file for the build_flags I used for MBEDTLS definitions which are needed for the library to enable ciphers.
 
-WiFiClientSecure implementations work well with a self-signed certificate right now. They have still problems with with more secure web apps and certificates.
+WiFiClientSecure implementations work well with a self-signed certificate right now. They still have problems with with more secure web apps and certificates.
 
 
 TODO:
