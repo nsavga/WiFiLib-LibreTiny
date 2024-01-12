@@ -64,6 +64,7 @@ uint8_t WiFiSSLClient::connected() {
 }
 
 int WiFiSSLClient::available() {
+    // LT_IM(SSL, "available");
     int ret = 0;
     int err;
 
@@ -87,6 +88,7 @@ int WiFiSSLClient::available() {
 }
 
 int WiFiSSLClient::read() {
+    // LT_IM(SSL, "read");
     int ret;
     int err;
     uint8_t b[1];
@@ -108,6 +110,7 @@ int WiFiSSLClient::read() {
 }
 
 int WiFiSSLClient::read(uint8_t* buf, size_t size) {
+    // LT_IM(SSL, "read size = %d", size);
     uint16_t _size = size;
     int ret;
     int err;

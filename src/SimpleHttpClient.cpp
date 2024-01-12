@@ -50,14 +50,14 @@ bool SimpleHttpClient::begin(WiFiClient &client, String url)
 	int index = url.indexOf(':');
 	if (index < 0)
 	{
-		log_d("failed to parse protocol");
+		LT_IM(CLIENT, "failed to parse protocol");
 		return false;
 	}
 
 	String protocol = url.substring(0, index);
 	if (protocol != "http" && protocol != "https")
 	{
-		log_d("unknown protocol '%s'", protocol.c_str());
+		LT_IM(CLIENT, "unknown protocol '%s'", protocol.c_str());
 		return false;
 	}
 
@@ -68,20 +68,20 @@ bool SimpleHttpClient::begin(WiFiClient &client, String url)
 
 bool SimpleHttpClient::beginInternal(String url, const char *expectedProtocol)
 {
-	log_v("url: %s", url.c_str());
+	LT_IM(CLIENT, "url: %s", url.c_str());
 
 	// check for : (http: or https:
 	int index = url.indexOf(':');
 	if (index < 0)
 	{
-		log_e("failed to parse protocol");
+		LT_IM(CLIENT, "failed to parse protocol");
 		return false;
 	}
 
 	_protocol = url.substring(0, index);
 	if (_protocol != expectedProtocol)
 	{
-		log_d("unexpected protocol: %s, expected %s", _protocol.c_str(), expectedProtocol);
+		LT_IM(CLIENT, "unexpected protocol: %s, expected %s", _protocol.c_str(), expectedProtocol);
 		return false;
 	}
 
@@ -121,13 +121,13 @@ bool SimpleHttpClient::beginInternal(String url, const char *expectedProtocol)
 	}
 	if (_host != the_host && connected())
 	{
-		log_d("switching host from '%s' to '%s'. disconnecting first", _host.c_str(), the_host.c_str());
+		LT_IM(CLIENT, "switching host from '%s' to '%s'. disconnecting first", _host.c_str(), the_host.c_str());
 		_canReuse = false;
 		disconnect(true);
 	}
 	_host = the_host;
 	_uri = url;
-	log_d("protocol: %s, host: %s port: %d url: %s", _protocol.c_str(), _host.c_str(), _port, _uri.c_str());
+	LT_IM(CLIENT, "protocol: %s, host: %s port: %d url: %s", _protocol.c_str(), _host.c_str(), _port, _uri.c_str());
 	return true;
 }
 
@@ -147,17 +147,17 @@ void SimpleHttpClient::disconnect(bool preserveClient)
 	{
 		if (_client->available() > 0)
 		{
-			log_d("still data in buffer (%d), clean up.\n", _client->available());
+			LT_IM(CLIENT, "still data in buffer (%d), clean up.\n", _client->available());
 			_client->flush();
 		}
 
 		if (_reuse && _canReuse)
 		{
-			log_d("tcp keep open for reuse");
+			LT_IM(CLIENT, "tcp keep open for reuse");
 		}
 		else
 		{
-			log_d("tcp stop");
+			LT_IM(CLIENT, "tcp stop");
 			_client->stop();
 			if (!preserveClient)
 			{
@@ -167,7 +167,7 @@ void SimpleHttpClient::disconnect(bool preserveClient)
 	}
 	else
 	{
-		log_d("tcp is closed\n");
+		LT_IM(CLIENT, "tcp is closed\n");
 	}
 }
 
@@ -316,7 +316,7 @@ int SimpleHttpClient::sendRequest(const char *type, uint8_t *payload, size_t siz
 		}
 	}
 
-	log_d("request type: '%s' redirCount: %d\n", type, redirectCount);
+	LT_IM(CLIENT, "request type: '%s' redirCount: %d\n", type, redirectCount);
 
 	// connect to server
 	if (!connect())
@@ -345,7 +345,7 @@ int SimpleHttpClient::sendRequest(const char *type, uint8_t *payload, size_t siz
 	}
 
 	code = handleHeaderResponse();
-	log_d("sendRequest code=%d\n", code);
+	LT_IM(CLIENT, "sendRequest code=%d\n", code);
 
 	// handle Server Response (Header)
 	return returnError(code);
@@ -438,12 +438,12 @@ int SimpleHttpClient::sendRequest(const char *type, Stream *stream, size_t size)
 				// are all Bytes a writen to stream ?
 				if (bytesWrite != bytesRead)
 				{
-					log_d("short write, asked for %d but got %d retry...", bytesRead, bytesWrite);
+					LT_IM(CLIENT, "short write, asked for %d but got %d retry...", bytesRead, bytesWrite);
 
 					// check for write error
 					if (_client->getWriteError())
 					{
-						log_d("stream write error %d", _client->getWriteError());
+						LT_IM(CLIENT, "stream write error %d", _client->getWriteError());
 
 						// reset write error for retry
 						_client->clearWriteError();
@@ -461,7 +461,7 @@ int SimpleHttpClient::sendRequest(const char *type, Stream *stream, size_t size)
 					if (bytesWrite != leftBytes)
 					{
 						// failed again
-						log_d("short write, asked for %d but got %d failed.", leftBytes, bytesWrite);
+						LT_IM(CLIENT, "short write, asked for %d but got %d failed.", leftBytes, bytesWrite);
 						free(buff);
 						return returnError(HTTPC_ERROR_SEND_PAYLOAD_FAILED);
 					}
@@ -470,7 +470,7 @@ int SimpleHttpClient::sendRequest(const char *type, Stream *stream, size_t size)
 				// check for write error
 				if (_client->getWriteError())
 				{
-					log_d("stream write error %d", _client->getWriteError());
+					LT_IM(CLIENT, "stream write error %d", _client->getWriteError());
 					free(buff);
 					return returnError(HTTPC_ERROR_SEND_PAYLOAD_FAILED);
 				}
@@ -493,18 +493,18 @@ int SimpleHttpClient::sendRequest(const char *type, Stream *stream, size_t size)
 
 		if (size && (int)size != bytesWritten)
 		{
-			log_d("Stream payload bytesWritten %d and size %d mismatch!.", bytesWritten, size);
-			log_d("ERROR SEND PAYLOAD FAILED!");
+			LT_IM(CLIENT, "Stream payload bytesWritten %d and size %d mismatch!.", bytesWritten, size);
+			LT_IM(CLIENT, "ERROR SEND PAYLOAD FAILED!");
 			return returnError(HTTPC_ERROR_SEND_PAYLOAD_FAILED);
 		}
 		else
 		{
-			log_d("Stream payload written: %d", bytesWritten);
+			LT_IM(CLIENT, "Stream payload written: %d", bytesWritten);
 		}
 	}
 	else
 	{
-		log_d("too less ram! need %d", HTTP_TCP_BUFFER_SIZE);
+		LT_IM(CLIENT, "too less ram! need %d", HTTP_TCP_BUFFER_SIZE);
 		return returnError(HTTPC_ERROR_TOO_LESS_RAM);
 	}
 
@@ -532,7 +532,7 @@ WiFiClient &SimpleHttpClient::getStream(void)
 		return *_client;
 	}
 
-	log_w("getStream: not connected");
+	LT_IM(CLIENT, "getStream: not connected");
 	static WiFiClient empty;
 	return empty;
 }
@@ -548,7 +548,7 @@ WiFiClient *SimpleHttpClient::getStreamPtr(void)
 		return _client;
 	}
 
-	log_w("getStreamPtr: not connected");
+	LT_IM(CLIENT, "getStreamPtr: not connected");
 	return nullptr;
 }
 
@@ -605,7 +605,7 @@ int SimpleHttpClient::writeToStream(Stream *stream)
 			// read size of chunk
 			len = (uint32_t)strtol((const char *)chunkHeader.c_str(), NULL, 16);
 			size += len;
-			log_d(" read chunk len: %d", len);
+			LT_IM(CLIENT, " read chunk len: %d", len);
 
 			// data left?
 			if (len > 0)
@@ -674,7 +674,7 @@ String SimpleHttpClient::getString(void)
 		}
 		else
 		{
-			log_d("not enough memory to reserve a string! need: %d", (_size + 1));
+			LT_IM(CLIENT, "not enough memory to reserve a string! need: %d", (_size + 1));
 		}
 	}
 
@@ -828,11 +828,11 @@ bool SimpleHttpClient::connect(void)
 	{
 		if (_reuse)
 		{
-			log_d("already connected, reusing connection");
+			LT_IM(CLIENT, "already connected, reusing connection");
 		}
 		else
 		{
-			log_d("already connected, try reuse!");
+			LT_IM(CLIENT, "already connected, try reuse!");
 		}
 		while (_client->available() > 0)
 		{
@@ -843,20 +843,20 @@ bool SimpleHttpClient::connect(void)
 
 	if (!_client)
 	{
-		log_d("HTTPClient::begin was not called or returned error");
+		LT_IM(CLIENT, "HTTPClient::begin was not called or returned error");
 		return false;
 	}
 
 	if (!_client->connect(_host.c_str(), _port, _connectTimeout))
 	{
-		log_d("failed connect to %s:%u", _host.c_str(), _port);
+		LT_IM(CLIENT, "failed connect to %s:%u", _host.c_str(), _port);
 		return false;
 	}
 
 	// set Timeout for WiFiClient and for Stream::readBytesUntil() and Stream::readStringUntil()
 	_client->setTimeout((_tcpTimeout + 500) / 1000);
 
-	log_d(" connected to %s:%u", _host.c_str(), _port);
+	LT_IM(CLIENT, " connected to %s:%u", _host.c_str(), _port);
 
 	/*
 	#ifdef ESP8266
@@ -960,7 +960,7 @@ int SimpleHttpClient::handleHeaderResponse()
 
 			lastDataTime = millis();
 
-			log_v("RX: '%s'", headerLine.c_str());
+			LT_IM(CLIENT, "RX: '%s'", headerLine.c_str());
 
 			if (firstLine)
 			{
@@ -1026,16 +1026,16 @@ int SimpleHttpClient::handleHeaderResponse()
 
 			if (headerLine == "")
 			{
-				log_d("code: %d", _returnCode);
+				LT_IM(CLIENT, "code: %d", _returnCode);
 
 				if (_size > 0)
 				{
-					log_d("size: %d", _size);
+					LT_IM(CLIENT, "size: %d", _size);
 				}
 
 				if (transferEncoding.length() > 0)
 				{
-					log_d("Transfer-Encoding: %s", transferEncoding.c_str());
+					LT_IM(CLIENT, "Transfer-Encoding: %s", transferEncoding.c_str());
 					if (transferEncoding.equalsIgnoreCase("chunked"))
 					{
 						_transferEncoding = HTTPC_TE_CHUNKED;
@@ -1060,7 +1060,7 @@ int SimpleHttpClient::handleHeaderResponse()
 				}
 				else
 				{
-					log_d("Remote host is not an HTTP Server!");
+					LT_IM(CLIENT, "Remote host is not an HTTP Server!");
 					return HTTPC_ERROR_NO_HTTP_SERVER;
 				}
 			}
@@ -1139,12 +1139,12 @@ int SimpleHttpClient::writeToStreamDataBlock(Stream *stream, int size)
 				// are all Bytes a writen to stream ?
 				if (bytesWrite != bytesRead)
 				{
-					log_d("short write asked for %d but got %d retry...", bytesRead, bytesWrite);
+					LT_IM(CLIENT, "short write asked for %d but got %d retry...", bytesRead, bytesWrite);
 
 					// check for write error
 					if (stream->getWriteError())
 					{
-						log_d("stream write error %d", stream->getWriteError());
+						LT_IM(CLIENT, "stream write error %d", stream->getWriteError());
 
 						// reset write error for retry
 						stream->clearWriteError();
@@ -1162,7 +1162,7 @@ int SimpleHttpClient::writeToStreamDataBlock(Stream *stream, int size)
 					if (bytesWrite != leftBytes)
 					{
 						// failed again
-						log_w("short write asked for %d but got %d failed.", leftBytes, bytesWrite);
+						LT_IM(CLIENT, "short write asked for %d but got %d failed.", leftBytes, bytesWrite);
 						free(buff);
 						return HTTPC_ERROR_STREAM_WRITE;
 					}
@@ -1171,7 +1171,7 @@ int SimpleHttpClient::writeToStreamDataBlock(Stream *stream, int size)
 				// check for write error
 				if (stream->getWriteError())
 				{
-					log_w("stream write error %d", stream->getWriteError());
+					LT_IM(CLIENT, "stream write error %d", stream->getWriteError());
 					free(buff);
 					return HTTPC_ERROR_STREAM_WRITE;
 				}
@@ -1192,17 +1192,17 @@ int SimpleHttpClient::writeToStreamDataBlock(Stream *stream, int size)
 
 		free(buff);
 
-		log_d("connection closed or file end (written: %d).", bytesWritten);
+		LT_IM(CLIENT, "connection closed or file end (written: %d).", bytesWritten);
 
 		if ((size > 0) && (size != bytesWritten))
 		{
-			log_d("bytesWritten %d and size %d mismatch!.", bytesWritten, size);
+			LT_IM(CLIENT, "bytesWritten %d and size %d mismatch!.", bytesWritten, size);
 			return HTTPC_ERROR_STREAM_WRITE;
 		}
 	}
 	else
 	{
-		log_w("too less ram! need %d", HTTP_TCP_BUFFER_SIZE);
+		LT_IM(CLIENT, "too less ram! need %d", HTTP_TCP_BUFFER_SIZE);
 		return HTTPC_ERROR_TOO_LESS_RAM;
 	}
 
@@ -1218,10 +1218,10 @@ int SimpleHttpClient::returnError(int error)
 {
 	if (error < 0)
 	{
-		log_w("error(%d): %s", error, errorToString(error).c_str());
+		LT_IM(CLIENT, "error(%d): %s", error, errorToString(error).c_str());
 		if (connected())
 		{
-			log_d("tcp stop");
+			LT_IM(CLIENT, "tcp stop");
 			_client->stop();
 		}
 	}
@@ -1254,7 +1254,7 @@ bool SimpleHttpClient::setURL(const String &url)
 
 	if (!url.startsWith(_protocol + ':'))
 	{
-		log_d("new URL not the same protocol, expected '%s', URL: '%s'\n", _protocol.c_str(), url.c_str());
+		LT_IM(CLIENT, "new URL not the same protocol, expected '%s', URL: '%s'\n", _protocol.c_str(), url.c_str());
 		return false;
 	}
 
