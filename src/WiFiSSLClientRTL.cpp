@@ -1,3 +1,21 @@
+#ifndef LT_BK72XX
+
+#include "WiFi.h"
+#include "WiFiSSLClientRTL.h"
+
+extern "C" {
+    // #include "wl_definitions.h"
+    // #include "wl_types.h"
+    #include "string.h"
+    #include "errno.h"
+}
+
+#ifdef __cplusplus
+extern "C" {
+#include "platform_stdlib.h"
+}
+#endif
+
 #include "Arduino.h"
 
 #include "string.h"
@@ -13,7 +31,11 @@
 #include <mbedtls/net_sockets.h>
 #include <mbedtls/error.h>
 #include <mbedtls/debug.h>
-#include "ard_ssl.h"
+
+#undef read
+#undef write
+#undef recv
+#undef connect
 
 #define ARDUINO_MBEDTLS_DEBUG_LEVEL 0 // Set to 0 to disable debug messsages, 5 to enable all debug messages
 
@@ -108,7 +130,414 @@ static void my_debug(void *ctx, int level, const char *file, int line, const cha
     printf("%s:%04d: |%d| %s", basename, line, level, str);
 }
 
-int start_ssl_client(sslclient_context *ssl_client, uint32_t ipAddress, uint32_t port, unsigned char *rootCABuff, unsigned char *cli_cert, unsigned char *cli_key, unsigned char *pskIdent, unsigned char *psKey, char *SNI_hostname)
+WiFiSSLClientRTL::WiFiSSLClientRTL() {
+    _is_connected = false;
+    _sock = -1;
+
+    sslclient.socket = -1;
+    sslclient.ssl = NULL;
+    sslclient.recvTimeout = 3000;
+
+    _rootCABuff = NULL;
+    _cli_cert = NULL;
+    _cli_key = NULL;
+    _psKey = NULL;
+    _pskIdent = NULL;
+    _sni_hostname = NULL;
+}
+
+WiFiSSLClientRTL::~WiFiSSLClientRTL()
+{
+
+}
+
+WiFiSSLClientRTL::WiFiSSLClientRTL(uint8_t sock) {
+    _sock = sock;
+
+    sslclient.socket = -1;
+    sslclient.ssl = NULL;
+    sslclient.recvTimeout = 3000;
+
+//    if(sock >= 0) {
+//        _is_connected = true;
+//    }
+    _is_connected = true;
+
+    _rootCABuff = NULL;
+    _cli_cert = NULL;
+    _cli_key = NULL;
+    _psKey = NULL;
+    _pskIdent = NULL;
+    _sni_hostname = NULL;
+}
+
+uint8_t WiFiSSLClientRTL::connected() {
+    if (sslclient.socket < 0) {
+        _is_connected = false;
+        return 0;
+    } else {
+        if (_is_connected) {
+            return 1;
+        } else {
+            stop();
+            return 0;
+        }
+    }
+}
+
+int WiFiSSLClientRTL::available() {
+    // LT_IM(SSL, "available");
+    int ret = 0;
+    int err;
+
+    if (!_is_connected) {
+        return 0;
+    }
+    if (sslclient.socket >= 0) {
+        ret = availData(&sslclient);
+        if (ret > 0) {
+            return 1;
+        } else {
+            err = getLastErrno(&sslclient);
+            if ((err > 0) && (err != EAGAIN)) {
+                _is_connected = false;
+            }
+        }
+        return 0;
+    }
+
+    return 0;
+}
+
+int WiFiSSLClientRTL::read() {
+    // LT_IM(SSL, "read");
+    int ret;
+    int err;
+    uint8_t b[1];
+
+    if (!available()) {
+        return -1;
+    }
+
+    ret = getData(&sslclient, b);
+    if (ret > 0) {
+        return b[0];
+    } else {
+        err = getLastErrno(&sslclient);
+        if ((err > 0) && (err != EAGAIN)) {
+            _is_connected = false;
+        }
+    }
+    return -1;
+}
+
+int WiFiSSLClientRTL::read(uint8_t* buf, size_t size) {
+    // LT_IM(SSL, "read size = %d", size);
+    uint16_t _size = size;
+    int ret;
+    int err;
+
+    ret = getDataBuf(&sslclient, buf, _size);
+    if (ret <= 0) {
+        err = getLastErrno(&sslclient);
+        if ((err > 0) && (err != EAGAIN)) {
+            _is_connected = false;
+        }
+    }
+    return ret;
+}
+
+void WiFiSSLClientRTL::stop() {
+
+    if (sslclient.socket < 0) {
+        return;
+    }
+
+    stopClient(&sslclient);
+    _is_connected = false;
+
+    sslclient.socket = -1;
+    _sock = -1;
+}
+
+size_t WiFiSSLClientRTL::write(uint8_t b) {
+    return write(&b, 1);
+}
+
+size_t WiFiSSLClientRTL::write(const uint8_t *buf, size_t size) {
+    if (sslclient.socket < 0) {
+        setWriteError();
+        return 0;
+    }
+    if (size == 0) {
+        setWriteError();
+        return 0;
+    }
+
+    if (!sendData(&sslclient, buf, size)) {
+        setWriteError();
+        _is_connected = false;
+        return 0;
+    }
+
+    return size;
+}
+
+WiFiSSLClientRTL::operator bool() {
+    return (sslclient.socket >= 0);
+}
+
+int WiFiSSLClientRTL::connect(IPAddress ip, uint16_t port) {
+    if (_psKey != NULL && _pskIdent != NULL)
+        return connect(ip, port, _pskIdent, _psKey);
+    return connect(ip, port, _rootCABuff, _cli_cert, _cli_key);
+}
+
+int WiFiSSLClientRTL::connect(const char *host, uint16_t port, int32_t connectTimeOut)
+{
+    _timeout = connectTimeOut;
+    return connect(host, port);
+}
+
+int WiFiSSLClientRTL::connect(const char *host, uint16_t port) {
+
+    if (_sni_hostname == NULL) {
+        _sni_hostname = (char*)host;
+    }
+
+    if (_psKey != NULL && _pskIdent != NULL)
+        return connect(host, port, _pskIdent, _psKey);
+    return connect(host, port, _rootCABuff, _cli_cert, _cli_key);
+}
+
+int WiFiSSLClientRTL::connect(const char* host, uint16_t port, unsigned char* rootCABuff, unsigned char* cli_cert, unsigned char* cli_key) {
+    IPAddress remote_addr;
+
+    if (_sni_hostname == NULL) {
+        _sni_hostname = (char*)host;
+    }
+
+    if (WiFi.hostByName(host, remote_addr)) {
+        return connect(remote_addr, port, rootCABuff, cli_cert, cli_key);
+    }
+    return 0;
+}
+
+int WiFiSSLClientRTL::connect(IPAddress ip, uint16_t port, unsigned char* rootCABuff, unsigned char* cli_cert, unsigned char* cli_key) {
+    int ret = 0;
+
+    ret = startClient(&sslclient, ip, port, rootCABuff, cli_cert, cli_key, NULL, NULL, _sni_hostname);
+
+    if (ret < 0) {
+        _is_connected = false;
+        return 0;
+    } else {
+        _is_connected = true;
+    }
+
+    return 1;
+}
+
+int WiFiSSLClientRTL::connect(const char *host, uint16_t port, unsigned char* pskIdent, unsigned char* psKey) {
+    IPAddress remote_addr;
+
+    if (_sni_hostname == NULL) {
+        _sni_hostname = (char*)host;
+    }
+
+    if (WiFi.hostByName(host, remote_addr)) {
+        return connect(remote_addr, port, pskIdent, psKey);
+    }
+    return 0;
+}
+
+int WiFiSSLClientRTL::connect(IPAddress ip, uint16_t port, unsigned char* pskIdent, unsigned char* psKey) {
+    int ret = 0;
+
+    ret = startClient(&sslclient, ip, port, NULL, NULL, NULL, pskIdent, psKey, _sni_hostname);
+
+    if (ret < 0) {
+        _is_connected = false;
+        return 0;
+    } else {
+        _is_connected = true;
+    }
+
+    return 1;
+}
+
+int WiFiSSLClientRTL::peek() {
+    uint8_t b;
+
+    if (!available()) {
+        return -1;
+    }
+
+    getData(&sslclient, &b, 1);
+
+    return b;
+}
+void WiFiSSLClientRTL::flush() {
+    while (available()) {
+        read();
+    }
+}
+
+void WiFiSSLClientRTL::setRootCA(unsigned char *rootCA) {
+    _rootCABuff = rootCA;
+}
+
+void WiFiSSLClientRTL::setClientCertificate(unsigned char *client_ca, unsigned char *private_key) {
+    _cli_cert = client_ca;
+    _cli_key = private_key;
+}
+
+void WiFiSSLClientRTL::setPreSharedKey(unsigned char *pskIdent, unsigned char *psKey) {
+    _psKey = psKey;
+    _pskIdent = pskIdent;
+}
+
+int WiFiSSLClientRTL::setRecvTimeout(int timeout) {
+    sslclient.recvTimeout = timeout;
+    if (connected()) {
+        setSockRecvTimeout(sslclient.socket, sslclient.recvTimeout);
+    }
+
+    return 0;
+}
+
+
+uint16_t WiFiSSLClientRTL::availData(sslclient_context *ssl_client)
+{
+    //int ret;
+
+    if (ssl_client->socket < 0) {
+        return 0;
+    }
+
+    if (_available) {
+        return 1;
+    } else {
+        return getData(ssl_client, c, 1);
+    }
+}
+
+bool WiFiSSLClientRTL::getData(sslclient_context *ssl_client, uint8_t *data, uint8_t peek)
+{
+    int ret = 0;
+    int flag = 0;
+
+    if (_available) {
+        /* we already has data to read */
+        data[0] = c[0];
+
+        //if (peek) {
+        //} else {
+        //    /* It's not peek and the data has been taken */
+        //    _available = false;
+        //}
+        if (!peek) {
+            /* It's not peek and the data has been taken */
+            _available = false;
+        }
+
+        return true;
+    }
+
+    if (peek) {
+        flag |= 1;
+    }
+
+    ret = get_ssl_receive(ssl_client, c, 1, flag);
+
+    if (ret == 1) {
+        data[0] = c[0];
+        if (peek) {
+            _available = true;
+        } else {
+            _available = false;
+        }
+        return true;
+    }
+
+    return false;
+}
+
+int WiFiSSLClientRTL::getDataBuf(sslclient_context *ssl_client, uint8_t *_data, uint16_t _dataLen)
+{
+    int ret;
+
+    if (_available) {
+        /* there is one byte cached */
+        _data[0] = c[0];
+        _available = false;
+        _dataLen--;
+        if (_dataLen > 0) {
+            ret = get_ssl_receive(ssl_client, &_data[1], _dataLen, 0);
+            if (ret > 0) {
+                ret++;
+                return ret;
+            } else {
+                return 1;
+            }
+        } else {
+            return 1;
+        }
+    } else {
+        ret = get_ssl_receive(ssl_client, _data, _dataLen, 0);
+    }
+
+    return ret;
+}
+
+void WiFiSSLClientRTL::stopClient(sslclient_context *ssl_client)
+{
+    stop_ssl_socket(ssl_client);
+    _available = false;
+}
+
+bool WiFiSSLClientRTL::sendData(sslclient_context *ssl_client, const uint8_t *data, uint16_t len)
+{
+    int ret;
+
+    if (ssl_client->socket < 0) {
+        return false;
+    }
+
+    ret = send_ssl_data(ssl_client, data, len);
+
+    if (ret == 0) {
+        return false;
+    }
+
+    return true;
+}
+
+int WiFiSSLClientRTL::startClient(sslclient_context *ssl_client, uint32_t ipAddress, uint32_t port, unsigned char* rootCABuff, unsigned char* cli_cert, unsigned char* cli_key, unsigned char* pskIdent, unsigned char* psKey, char* SNI_hostname)
+{
+    int ret;
+
+    ret = start_ssl_client(ssl_client, ipAddress, port, rootCABuff, cli_cert, cli_key, pskIdent, psKey, SNI_hostname);
+
+    return ret;
+}
+
+int WiFiSSLClientRTL::getLastErrno(sslclient_context *ssl_client)
+{
+    return get_ssl_sock_errno(ssl_client);
+}
+
+int WiFiSSLClientRTL::setSockRecvTimeout(int sock, int timeout)
+{
+    return setSockRecvTimeout(sock, timeout);
+}
+
+
+
+
+
+
+int WiFiSSLClientRTL::start_ssl_client(sslclient_context *ssl_client, uint32_t ipAddress, uint32_t port, unsigned char *rootCABuff, unsigned char *cli_cert, unsigned char *cli_key, unsigned char *pskIdent, unsigned char *psKey, char *SNI_hostname)
 {
     int ret = 0;
     int timeout;
@@ -399,7 +828,7 @@ int start_ssl_client(sslclient_context *ssl_client, uint32_t ipAddress, uint32_t
     return ssl_client->socket;
 }
 
-void stop_ssl_socket(sslclient_context *ssl_client)
+void WiFiSSLClientRTL::stop_ssl_socket(sslclient_context *ssl_client)
 {
     lwip_shutdown(ssl_client->socket, SHUT_RDWR);
     lwip_close(ssl_client->socket);
@@ -420,7 +849,7 @@ void stop_ssl_socket(sslclient_context *ssl_client)
     }
 }
 
-int send_ssl_data(sslclient_context *ssl_client, const uint8_t *data, uint16_t len)
+int WiFiSSLClientRTL::send_ssl_data(sslclient_context *ssl_client, const uint8_t *data, uint16_t len)
 {
     int ret = -1;
 
@@ -432,7 +861,7 @@ int send_ssl_data(sslclient_context *ssl_client, const uint8_t *data, uint16_t l
     return ret;
 }
 
-int get_ssl_receive(sslclient_context *ssl_client, uint8_t *data, int length, int flag)
+int WiFiSSLClientRTL::get_ssl_receive(sslclient_context *ssl_client, uint8_t *data, int length, int flag)
 {
     int ret = 0;
     uint8_t has_backup_recvtimeout = 0;
@@ -471,7 +900,7 @@ int get_ssl_receive(sslclient_context *ssl_client, uint8_t *data, int length, in
     return ret;
 }
 
-int get_ssl_sock_errno(sslclient_context *ssl_client)
+int WiFiSSLClientRTL::get_ssl_sock_errno(sslclient_context *ssl_client)
 {
     int so_error;
     socklen_t len = sizeof(so_error);
@@ -479,7 +908,7 @@ int get_ssl_sock_errno(sslclient_context *ssl_client)
     return so_error;
 }
 
-int get_ssl_bytes_avail(sslclient_context *ssl_client)
+int WiFiSSLClientRTL::get_ssl_bytes_avail(sslclient_context *ssl_client)
 {
     if (ssl_client->ssl != NULL)
     {
@@ -490,3 +919,6 @@ int get_ssl_bytes_avail(sslclient_context *ssl_client)
         return 0;
     }
 }
+
+
+#endif
