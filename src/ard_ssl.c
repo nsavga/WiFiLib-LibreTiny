@@ -186,6 +186,14 @@ int start_ssl_client(sslclient_context *ssl_client, uint32_t ipAddress, uint32_t
             mbedtls_ssl_init(ssl_client->ssl);
             mbedtls_ssl_config_init(ssl_client->conf);
 
+            ret = mbedtls_ssl_conf_max_frag_len(ssl_client->conf, MBEDTLS_SSL_MAX_FRAG_LEN_1024);
+
+            if (ret != 0)
+            {
+                printf("ERROR: mbedtls_ssl_conf_max_frag_len failed! \r\n");
+                break;
+            }
+
             if (ARDUINO_MBEDTLS_DEBUG_LEVEL > 0)
             {
                 mbedtls_ssl_conf_verify(ssl_client->conf, my_verify, NULL);
