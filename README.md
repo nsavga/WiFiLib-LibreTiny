@@ -3,7 +3,7 @@ Library consists of:
 - A simpler HttpClient class which doesnt have cookies and other stuff which I didn't need for my project's use cases.
 - WiFiClientRTL class which implements the WiFiClient for RTL8720 and RTL8710 chips. (Tested only on RTL8720CF (wbr3))
 - WiFiSSLClientRTL class which implements the WiFiClientSecure for RTL8720 and RTL8710 chips. (Tested only on RTL8720CF (wbr3) by using the feature/realtek-update branch of LibreTiny) (This is mostly copied and refactored from https://github.com/ambiot/ambd_arduino WiFiSSLClient implementation)
-- WiFiSSLClientBeken class which implements the WiFiClientSecure for BK72XX chips as it needed a separate logic. Copied and refactored from ESP32 arduino library.
+- WiFiSSLClientBeken class which implements the WiFiClientSecure for BK72XX chips as it needed a separate logic. Copied and refactored from ESP32 arduino library. (Tested on BK7231S (wb3s))
 
 
 Please check the platformio.ini file for the build_flags I used for MBEDTLS definitions which are needed for the library to enable ciphers.
