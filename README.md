@@ -10,7 +10,7 @@ Please check the platformio.ini file for the build_flags I used for MBEDTLS defi
 
 WiFiClientSecure implementations work well with a self-signed certificate right now. They still have problems with more secure web apps and certificates.
 
-IMPORTANT NOTE: All 3 WiFiClient inherited classes rely on changing the bool _connected field of LWIPClient class to protected instead of private, so that they could access it during inheritance.. 
+IMPORTANT NOTE: All 3 WiFiClient inherited classes rely on changing the bool _connected field of LWIPClient class of LibreTiny to protected instead of private, so that they could access it during inheritance.. 
 
 TODO:
 - Find a way to add correct ciphers to work with LetsEncrypt and other systems, which are sending fatal alert now during the handshake. This is caused of the lack of correct ciphers on the client. It should be fixed by adding correct MBEDTLS_** definitions during compile time..
