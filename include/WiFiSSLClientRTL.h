@@ -8,11 +8,9 @@
 #include "WiFiClient.h"
 #include "IPAddress.h"
 
-
 #include <inttypes.h>
 
 #define DATA_LENTH 128
-
 
 struct mbedtls_ssl_context;
 struct mbedtls_ssl_config;
@@ -48,7 +46,7 @@ public:
     virtual uint8_t connected();
     virtual operator bool();
 
-    void setRootCA(unsigned char *rootCA);
+    void setCACert(const char *rootCA);
     void setClientCertificate(unsigned char *client_ca, unsigned char *private_key);
     void setPreSharedKey(unsigned char *pskIdent, unsigned char *psKey); // psKey expressed as hexadecimal string
 
@@ -65,6 +63,8 @@ private:
     bool _is_connected;
     sslclient_context sslclient;
     // SSLDrv ssldrv;
+
+    void setRootCA(unsigned char *rootCA);
 
     unsigned char *_rootCABuff;
     unsigned char *_cli_cert;
