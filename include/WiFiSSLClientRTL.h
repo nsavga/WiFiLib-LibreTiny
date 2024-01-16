@@ -62,9 +62,8 @@ private:
     int _sock;
     bool _is_connected;
     sslclient_context sslclient;
-    // SSLDrv ssldrv;
 
-    void setRootCA(unsigned char *rootCA);
+    // void setRootCA(unsigned char *rootCA);
 
     unsigned char *_rootCABuff;
     unsigned char *_cli_cert;

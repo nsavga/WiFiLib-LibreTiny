@@ -383,9 +383,11 @@ void WiFiSSLClientRTL::flush() {
     }
 }
 
-void WiFiSSLClientRTL::setRootCA(unsigned char *rootCA) {
-    _rootCABuff = rootCA;
+void WiFiSSLClientRTL::setCACert(const char *rootCA) {
+    // _rootCABuff = rootCA;
+    _rootCABuff = (unsigned char *)rootCA;
 }
+
 
 void WiFiSSLClientRTL::setClientCertificate(unsigned char *client_ca, unsigned char *private_key) {
     _cli_cert = client_ca;

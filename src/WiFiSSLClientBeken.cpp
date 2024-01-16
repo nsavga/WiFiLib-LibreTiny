@@ -569,20 +569,6 @@ int WiFiSSLClientBeken::start_ssl_client(sslclient_context *ssl_client, const IP
         }
     }
 
-#define ROE(x, msg)                                              \
-    {                                                            \
-        if (((x) < 0))                                           \
-        {                                                        \
-            LT_EM(SSL, "LWIP Socket config of " msg " failed."); \
-            return -1;                                           \
-        }                                                        \
-    }
-    //  ROE(lwip_setsockopt(ssl_client->socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)),"SO_RCVTIMEO");
-    //  ROE(lwip_setsockopt(ssl_client->socket, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)),"SO_SNDTIMEO");
-
-    //  ROE(lwip_setsockopt(ssl_client->socket, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable)),"TCP_NODELAY");
-    //  ROE(lwip_setsockopt(ssl_client->socket, SOL_SOCKET, SO_KEEPALIVE, &enable, sizeof(enable)),"SO_KEEPALIVE");
-
     hede = lwip_setsockopt(ssl_client->socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
     LT_IM(SSL,"SO_RCVTIMEO = %d\n", hede);
     hede = lwip_setsockopt(ssl_client->socket, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
