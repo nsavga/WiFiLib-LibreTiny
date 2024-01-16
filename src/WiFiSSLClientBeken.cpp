@@ -1,22 +1,11 @@
 #ifdef LT_BK72XX
 
+#include "Arduino.h"
 #include "WiFi.h"
 #include "WiFiSSLClientBeken.h"
 
-extern "C" {
-    // #include "wl_definitions.h"
-    // #include "wl_types.h"
-    #include "string.h"
-    #include "errno.h"
-}
-
-// #ifdef __cplusplus
-// extern "C" {
-// #include "platform_stdlib.h"
-// }
-// #endif
-
-#include "Arduino.h"
+extern "C"
+{
 
 #include "string.h"
 #include "errno.h"
@@ -39,13 +28,12 @@ extern "C" {
 #undef write
 #undef recv
 #undef connect
+}
 
-
-const char *pers = "esp32-tls";
-
-static int _handle_error(int err, const char * function, int line)
+static int _handle_error(int err, const char *function, int line)
 {
-    if(err == -30848){
+    if (err == -30848)
+    {
         return err;
     }
 #ifdef MBEDTLS_ERROR_C
@@ -59,8 +47,6 @@ static int _handle_error(int err, const char * function, int line)
 }
 
 #define handle_error(e) _handle_error(e, __FUNCTION__, __LINE__)
-
-
 
 WiFiSSLClientBeken::WiFiSSLClientBeken()
 {
@@ -82,7 +68,6 @@ WiFiSSLClientBeken::WiFiSSLClientBeken()
     _use_ca_bundle = false;
 }
 
-
 WiFiSSLClientBeken::WiFiSSLClientBeken(int sock)
 {
     _connected = false;
@@ -93,7 +78,8 @@ WiFiSSLClientBeken::WiFiSSLClientBeken(int sock)
     sslclient->socket = sock;
     sslclient->handshake_timeout = 120000;
 
-    if (sock >= 0) {
+    if (sock >= 0)
+    {
         _connected = true;
     }
 
@@ -122,7 +108,8 @@ WiFiSSLClientBeken &WiFiSSLClientBeken::operator=(const WiFiSSLClientBeken &othe
 
 void WiFiSSLClientBeken::stop()
 {
-    if (sslclient->socket >= 0) {
+    if (sslclient->socket >= 0)
+    {
         close(sslclient->socket);
         sslclient->socket = -1;
         _connected = false;
@@ -138,7 +125,8 @@ int WiFiSSLClientBeken::connect(IPAddress ip, uint16_t port)
     return connect(ip, port, _CA_cert, _cert, _private_key);
 }
 
-int WiFiSSLClientBeken::connect(IPAddress ip, uint16_t port, int32_t timeout){
+int WiFiSSLClientBeken::connect(IPAddress ip, uint16_t port, int32_t timeout)
+{
     _timeout = timeout;
     return connect(ip, port);
 }
@@ -150,7 +138,8 @@ int WiFiSSLClientBeken::connect(const char *host, uint16_t port)
     return connect(host, port, _CA_cert, _cert, _private_key);
 }
 
-int WiFiSSLClientBeken::connect(const char *host, uint16_t port, int32_t timeout){
+int WiFiSSLClientBeken::connect(const char *host, uint16_t port, int32_t timeout)
+{
     _timeout = timeout;
     return connect(host, port);
 }
@@ -173,7 +162,8 @@ int WiFiSSLClientBeken::connect(IPAddress ip, uint16_t port, const char *host, c
 {
     int ret = start_ssl_client(sslclient, ip, port, host, _timeout, CA_cert, _use_ca_bundle, cert, private_key, NULL, NULL, _use_insecure, _alpn_protos);
     _lastError = ret;
-    if (ret < 0) {
+    if (ret < 0)
+    {
         LT_EM(SSL, "start_ssl_client: %d", ret);
         stop();
         return 0;
@@ -189,11 +179,13 @@ String WiFiSSLClientBeken::ipToString(const IPAddress &ip)
     return String(szRet);
 }
 
-int WiFiSSLClientBeken::connect(IPAddress ip, uint16_t port, const char *pskIdent, const char *psKey) {
+int WiFiSSLClientBeken::connect(IPAddress ip, uint16_t port, const char *pskIdent, const char *psKey)
+{
     return connect(ipToString(ip).c_str(), port, pskIdent, psKey);
 }
 
-int WiFiSSLClientBeken::connect(const char *host, uint16_t port, const char *pskIdent, const char *psKey) {
+int WiFiSSLClientBeken::connect(const char *host, uint16_t port, const char *pskIdent, const char *psKey)
+{
     LT_IM(SSL, "start_ssl_client with PSK");
 
     IPAddress address;
@@ -202,7 +194,8 @@ int WiFiSSLClientBeken::connect(const char *host, uint16_t port, const char *psk
 
     int ret = start_ssl_client(sslclient, address, port, host, _timeout, NULL, false, NULL, NULL, pskIdent, psKey, _use_insecure, _alpn_protos);
     _lastError = ret;
-    if (ret < 0) {
+    if (ret < 0)
+    {
         LT_EM(SSL, "start_ssl_client: %d", ret);
         stop();
         return 0;
@@ -211,8 +204,10 @@ int WiFiSSLClientBeken::connect(const char *host, uint16_t port, const char *psk
     return 1;
 }
 
-int WiFiSSLClientBeken::peek(){
-    if(_peek >= 0){
+int WiFiSSLClientBeken::peek()
+{
+    if (_peek >= 0)
+    {
         return _peek;
     }
     _peek = timedRead();
@@ -228,7 +223,8 @@ int WiFiSSLClientBeken::read()
 {
     uint8_t data = -1;
     int res = read(&data, 1);
-    if (res < 0) {
+    if (res < 0)
+    {
         return res;
     }
     return data;
@@ -236,11 +232,13 @@ int WiFiSSLClientBeken::read()
 
 size_t WiFiSSLClientBeken::write(const uint8_t *buf, size_t size)
 {
-    if (!_connected) {
+    if (!_connected)
+    {
         return 0;
     }
     int res = send_ssl_data(sslclient, buf, size);
-    if (res < 0) {
+    if (res < 0)
+    {
         stop();
         res = 0;
     }
@@ -251,28 +249,33 @@ int WiFiSSLClientBeken::read(uint8_t *buf, size_t size)
 {
     int peeked = 0;
     int avail = available();
-    if ((!buf && size) || avail <= 0) {
+    if ((!buf && size) || avail <= 0)
+    {
         return -1;
     }
-    if(!size){
+    if (!size)
+    {
         return 0;
     }
-    if(_peek >= 0){
+    if (_peek >= 0)
+    {
         buf[0] = _peek;
         _peek = -1;
         size--;
         avail--;
-        if(!size || !avail){
+        if (!size || !avail)
+        {
             return 1;
         }
         buf++;
         peeked = 1;
     }
-    
+
     int res = get_ssl_receive(sslclient, buf, size);
-    if (res < 0) {
+    if (res < 0)
+    {
         stop();
-        return peeked?peeked:res;
+        return peeked ? peeked : res;
     }
     return res + peeked;
 }
@@ -280,16 +283,18 @@ int WiFiSSLClientBeken::read(uint8_t *buf, size_t size)
 int WiFiSSLClientBeken::available()
 {
     int peeked = (_peek >= 0);
-    if (!_connected) {
+    if (!_connected)
+    {
         return peeked;
     }
     int res = data_to_read(sslclient);
-    if (res < 0) {
+    if (res < 0)
+    {
         stop();
-        return peeked?peeked:res;
+        return peeked ? peeked : res;
     }
-    // Serial.printf("AVAILABLE = %d\n", res + peeked);
-    return res+peeked;
+    
+    return res + peeked;
 }
 
 uint8_t WiFiSSLClientBeken::connected()
@@ -310,7 +315,7 @@ void WiFiSSLClientBeken::setInsecure()
     _use_insecure = true;
 }
 
-void WiFiSSLClientBeken::setCACert (const char *rootCA)
+void WiFiSSLClientBeken::setCACert(const char *rootCA)
 {
     _CA_cert = rootCA;
     _use_insecure = false;
@@ -351,18 +356,21 @@ void WiFiSSLClientBeken::setCACert (const char *rootCA)
 //     return verify_ssl_fingerprint(sslclient, fp, domain_name);
 // }
 
-char *WiFiSSLClientBeken::_streamLoad(Stream& stream, size_t size) {
-  char *dest = (char*)malloc(size+1);
-  if (!dest) {
-    return nullptr;
-  }
-  if (size != stream.readBytes(dest, size)) {
-    free(dest);
-    dest = nullptr;
-    return nullptr;
-  }
-  dest[size] = '\0';
-  return dest;
+char *WiFiSSLClientBeken::_streamLoad(Stream &stream, size_t size)
+{
+    char *dest = (char *)malloc(size + 1);
+    if (!dest)
+    {
+        return nullptr;
+    }
+    if (size != stream.readBytes(dest, size))
+    {
+        free(dest);
+        dest = nullptr;
+        return nullptr;
+    }
+    dest[size] = '\0';
+    return dest;
 }
 
 // bool WiFiSSLClientBeken::loadCACert(Stream& stream, size_t size) {
@@ -400,7 +408,8 @@ char *WiFiSSLClientBeken::_streamLoad(Stream& stream, size_t size) {
 
 int WiFiSSLClientBeken::lastError(char *buf, const size_t size)
 {
-    if (!_lastError) {
+    if (!_lastError)
+    {
         return 0;
     }
     mbedtls_strerror(_lastError, buf, size);
@@ -412,21 +421,20 @@ void WiFiSSLClientBeken::setHandshakeTimeout(unsigned long handshake_timeout)
     sslclient->handshake_timeout = handshake_timeout * 1000;
 }
 
-
-int WiFiSSLClientBeken::setSocketOption(int option, char* value, size_t len)
+int WiFiSSLClientBeken::setSocketOption(int option, char *value, size_t len)
 {
-    return setSocketOption(SOL_SOCKET, option, (const void*)value, len);
+    return setSocketOption(SOL_SOCKET, option, (const void *)value, len);
 }
 
-int WiFiSSLClientBeken::setSocketOption(int level, int option, const void* value, size_t len)
+int WiFiSSLClientBeken::setSocketOption(int level, int option, const void *value, size_t len)
 {
     int res = lwip_setsockopt(fd(), level, option, value, len);
-    if(res < 0) {
+    if (res < 0)
+    {
         LT_EM(SSL, "fail on %d, errno: %d, \"%s\"", fd(), errno, strerror(errno));
     }
     return res;
 }
-
 
 // void WiFiSSLClientBeken::setAlpnProtocols(const char **alpn_protos)
 // {
@@ -436,16 +444,19 @@ int WiFiSSLClientBeken::setSocketOption(int level, int option, const void* value
 int WiFiSSLClientBeken::setTimeout(uint32_t seconds)
 {
     _timeout = seconds * 1000;
-    if (sslclient->socket >= 0) {
+    if (sslclient->socket >= 0)
+    {
         struct timeval tv;
         tv.tv_sec = seconds;
         tv.tv_usec = 0;
-        if(setSocketOption(SO_RCVTIMEO, (char *)&tv, sizeof(struct timeval)) < 0) {
+        if (setSocketOption(SO_RCVTIMEO, (char *)&tv, sizeof(struct timeval)) < 0)
+        {
             return -1;
         }
         return setSocketOption(SO_SNDTIMEO, (char *)&tv, sizeof(struct timeval));
     }
-    else {
+    else
+    {
         return 0;
     }
 }
@@ -454,13 +465,6 @@ int WiFiSSLClientBeken::fd() const
 {
     return sslclient->socket;
 }
-
-
-
-
-
-
-
 
 void WiFiSSLClientBeken::ssl_init(sslclient_context *ssl_client)
 {
@@ -471,15 +475,15 @@ void WiFiSSLClientBeken::ssl_init(sslclient_context *ssl_client)
     mbedtls_ctr_drbg_init(&ssl_client->drbg_ctx);
 }
 
-
-int WiFiSSLClientBeken::start_ssl_client(sslclient_context *ssl_client, const IPAddress& ip, uint32_t port, const char* hostname, int timeout, const char *rootCABuff, bool useRootCABundle, const char *cli_cert, const char *cli_key, const char *pskIdent, const char *psKey, bool insecure, const char **alpn_protos)
+int WiFiSSLClientBeken::start_ssl_client(sslclient_context *ssl_client, const IPAddress &ip, uint32_t port, const char *hostname, int timeout, const char *rootCABuff, bool useRootCABundle, const char *cli_cert, const char *cli_key, const char *pskIdent, const char *psKey, bool insecure, const char **alpn_protos)
 {
     char buf[512];
     int ret, flags;
     int enable = 1;
     LT_IM(SSL, "Free internal heap before TLS %u", ESP.getFreeHeap());
 
-    if (rootCABuff == NULL && pskIdent == NULL && psKey == NULL && !insecure && !useRootCABundle) {
+    if (rootCABuff == NULL && pskIdent == NULL && psKey == NULL && !insecure && !useRootCABundle)
+    {
         return -1;
     }
 
@@ -487,15 +491,16 @@ int WiFiSSLClientBeken::start_ssl_client(sslclient_context *ssl_client, const IP
     ssl_client->socket = -1;
 
     ssl_client->socket = lwip_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (ssl_client->socket < 0) {
+    if (ssl_client->socket < 0)
+    {
         LT_EM(SSL, "ERROR opening socket");
         return ssl_client->socket;
     }
 
     int hede = -1;
 
-    hede = fcntl( ssl_client->socket, F_SETFL, fcntl( ssl_client->socket, F_GETFL, 0 ) | O_NONBLOCK );
-    Serial.printf("O_NONBLOCK = %d\n", hede);
+    hede = fcntl(ssl_client->socket, F_SETFL, fcntl(ssl_client->socket, F_GETFL, 0) | O_NONBLOCK);
+    LT_IM(SSL,"O_NONBLOCK = %d\n", hede);
 
     struct sockaddr_in serv_addr;
     memset(&serv_addr, 0, sizeof(serv_addr));
@@ -503,7 +508,8 @@ int WiFiSSLClientBeken::start_ssl_client(sslclient_context *ssl_client, const IP
     serv_addr.sin_addr.s_addr = ip;
     serv_addr.sin_port = htons(port);
 
-    if(timeout <= 0){
+    if (timeout <= 0)
+    {
         timeout = 30000; // Milli seconds.
     }
 
@@ -516,38 +522,46 @@ int WiFiSSLClientBeken::start_ssl_client(sslclient_context *ssl_client, const IP
     tv.tv_sec = timeout / 1000;
     tv.tv_usec = (timeout % 1000) * 1000;
 
-    int res = lwip_connect(ssl_client->socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
-    if (res < 0 && errno != EINPROGRESS) {
+    int res = lwip_connect(ssl_client->socket, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+    if (res < 0 && errno != EINPROGRESS)
+    {
         LT_EM(SSL, "connect on fd %d, errno: %d, \"%s\"", ssl_client->socket, errno, strerror(errno));
         lwip_close(ssl_client->socket);
         ssl_client->socket = -1;
         return -1;
     }
 
-    res = select(ssl_client->socket + 1, nullptr, &fdset, nullptr, timeout<0 ? nullptr : &tv);
-    if (res < 0) {
+    res = select(ssl_client->socket + 1, nullptr, &fdset, nullptr, timeout < 0 ? nullptr : &tv);
+    if (res < 0)
+    {
         LT_EM(SSL, "select on fd %d, errno: %d, \"%s\"", ssl_client->socket, errno, strerror(errno));
         lwip_close(ssl_client->socket);
         ssl_client->socket = -1;
         return -1;
-    } else if (res == 0) {
+    }
+    else if (res == 0)
+    {
         LT_IM(SSL, "select returned due to timeout %d ms for fd %d", timeout, ssl_client->socket);
         lwip_close(ssl_client->socket);
         ssl_client->socket = -1;
         return -1;
-    } else {
+    }
+    else
+    {
         int sockerr;
         socklen_t len = (socklen_t)sizeof(int);
         res = getsockopt(ssl_client->socket, SOL_SOCKET, SO_ERROR, &sockerr, &len);
 
-        if (res < 0) {
+        if (res < 0)
+        {
             LT_EM(SSL, "getsockopt on fd %d, errno: %d, \"%s\"", ssl_client->socket, errno, strerror(errno));
             lwip_close(ssl_client->socket);
             ssl_client->socket = -1;
             return -1;
         }
 
-        if (sockerr != 0) {
+        if (sockerr != 0)
+        {
             LT_EM(SSL, "socket error on fd %d, errno: %d, \"%s\"", ssl_client->socket, sockerr, strerror(sockerr));
             lwip_close(ssl_client->socket);
             ssl_client->socket = -1;
@@ -555,34 +569,39 @@ int WiFiSSLClientBeken::start_ssl_client(sslclient_context *ssl_client, const IP
         }
     }
 
-
-#define ROE(x,msg) { if (((x)<0)) { LT_EM(SSL, "LWIP Socket config of " msg " failed."); return -1; }}
+#define ROE(x, msg)                                              \
+    {                                                            \
+        if (((x) < 0))                                           \
+        {                                                        \
+            LT_EM(SSL, "LWIP Socket config of " msg " failed."); \
+            return -1;                                           \
+        }                                                        \
+    }
     //  ROE(lwip_setsockopt(ssl_client->socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)),"SO_RCVTIMEO");
     //  ROE(lwip_setsockopt(ssl_client->socket, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)),"SO_SNDTIMEO");
 
     //  ROE(lwip_setsockopt(ssl_client->socket, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable)),"TCP_NODELAY");
     //  ROE(lwip_setsockopt(ssl_client->socket, SOL_SOCKET, SO_KEEPALIVE, &enable, sizeof(enable)),"SO_KEEPALIVE");
 
-
     hede = lwip_setsockopt(ssl_client->socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-    Serial.printf("SO_RCVTIMEO = %d\n", hede);
-     hede = lwip_setsockopt(ssl_client->socket, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
-Serial.printf("SO_SNDTIMEO = %d\n", hede);
-     hede = lwip_setsockopt(ssl_client->socket, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable));
-     Serial.printf("TCP_NODELAY = %d\n", hede);
-     hede = lwip_setsockopt(ssl_client->socket, SOL_SOCKET, SO_KEEPALIVE, &enable, sizeof(enable));
+    LT_IM(SSL,"SO_RCVTIMEO = %d\n", hede);
+    hede = lwip_setsockopt(ssl_client->socket, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+    LT_IM(SSL,"SO_SNDTIMEO = %d\n", hede);
+    hede = lwip_setsockopt(ssl_client->socket, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable));
+    LT_IM(SSL,"TCP_NODELAY = %d\n", hede);
+    hede = lwip_setsockopt(ssl_client->socket, SOL_SOCKET, SO_KEEPALIVE, &enable, sizeof(enable));
 
-
-
-    Serial.printf("SO_KEEPALIVE = %d\n", hede);
-
+    LT_IM(SSL,"SO_KEEPALIVE = %d\n", hede);
 
     LT_IM(SSL, "Seeding the random number generator");
     mbedtls_entropy_init(&ssl_client->entropy_ctx);
 
+    const char *pers = "esp32-tls";
+
     ret = mbedtls_ctr_drbg_seed(&ssl_client->drbg_ctx, mbedtls_entropy_func,
-                                &ssl_client->entropy_ctx, (const unsigned char *) pers, strlen(pers));
-    if (ret < 0) {
+                                &ssl_client->entropy_ctx, (const unsigned char *)pers, strlen(pers));
+    if (ret < 0)
+    {
         return handle_error(ret);
     }
 
@@ -591,7 +610,8 @@ Serial.printf("SO_SNDTIMEO = %d\n", hede);
     if ((ret = mbedtls_ssl_config_defaults(&ssl_client->ssl_conf,
                                            MBEDTLS_SSL_IS_CLIENT,
                                            MBEDTLS_SSL_TRANSPORT_STREAM,
-                                           MBEDTLS_SSL_PRESET_DEFAULT)) != 0) {
+                                           MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
+    {
         return handle_error(ret);
     }
 
@@ -605,79 +625,103 @@ Serial.printf("SO_SNDTIMEO = %d\n", hede);
     // MBEDTLS_SSL_VERIFY_REQUIRED if a CA certificate is defined on Arduino IDE and
     // MBEDTLS_SSL_VERIFY_NONE if not.
 
-    if (insecure) {
+    if (insecure)
+    {
         mbedtls_ssl_conf_authmode(&ssl_client->ssl_conf, MBEDTLS_SSL_VERIFY_NONE);
         LT_DM(SSL, "WARNING: Skipping SSL Verification. INSECURE!");
-    } else if (rootCABuff != NULL) {
+    }
+    else if (rootCABuff != NULL)
+    {
         LT_IM(SSL, "Loading CA cert");
         mbedtls_x509_crt_init(&ssl_client->ca_cert);
         mbedtls_ssl_conf_authmode(&ssl_client->ssl_conf, MBEDTLS_SSL_VERIFY_REQUIRED);
         ret = mbedtls_x509_crt_parse(&ssl_client->ca_cert, (const unsigned char *)rootCABuff, strlen(rootCABuff) + 1);
         mbedtls_ssl_conf_ca_chain(&ssl_client->ssl_conf, &ssl_client->ca_cert, NULL);
-        //mbedtls_ssl_conf_verify(&ssl_client->ssl_ctx, my_verify, NULL );
-        if (ret < 0) {
+        // mbedtls_ssl_conf_verify(&ssl_client->ssl_ctx, my_verify, NULL );
+        if (ret < 0)
+        {
             // free the ca_cert in the case parse failed, otherwise, the old ca_cert still in the heap memory, that lead to "out of memory" crash.
             mbedtls_x509_crt_free(&ssl_client->ca_cert);
             return handle_error(ret);
         }
-    } else if (useRootCABundle) {
+    }
+    else if (useRootCABundle)
+    {
         // LT_IM(SSL, "Attaching root CA cert bundle");
         // ret = arduino_esp_crt_bundle_attach(&ssl_client->ssl_conf);
 
         // if (ret < 0) {
         //     return handle_error(ret);
         // }
-    } else if (pskIdent != NULL && psKey != NULL) {
+    }
+    else if (pskIdent != NULL && psKey != NULL)
+    {
         LT_IM(SSL, "Setting up PSK");
         // convert PSK from hex to binary
-        if ((strlen(psKey) & 1) != 0 || strlen(psKey) > 2*MBEDTLS_PSK_MAX_LEN) {
+        if ((strlen(psKey) & 1) != 0 || strlen(psKey) > 2 * MBEDTLS_PSK_MAX_LEN)
+        {
             LT_EM(SSL, "pre-shared key not valid hex or too long");
             return -1;
         }
         unsigned char psk[MBEDTLS_PSK_MAX_LEN];
-        size_t psk_len = strlen(psKey)/2;
-        for (int j=0; j<strlen(psKey); j+= 2) {
+        size_t psk_len = strlen(psKey) / 2;
+        for (int j = 0; j < strlen(psKey); j += 2)
+        {
             char c = psKey[j];
-            if (c >= '0' && c <= '9') c -= '0';
-            else if (c >= 'A' && c <= 'F') c -= 'A' - 10;
-            else if (c >= 'a' && c <= 'f') c -= 'a' - 10;
-            else return -1;
-            psk[j/2] = c<<4;
-            c = psKey[j+1];
-            if (c >= '0' && c <= '9') c -= '0';
-            else if (c >= 'A' && c <= 'F') c -= 'A' - 10;
-            else if (c >= 'a' && c <= 'f') c -= 'a' - 10;
-            else return -1;
-            psk[j/2] |= c;
+            if (c >= '0' && c <= '9')
+                c -= '0';
+            else if (c >= 'A' && c <= 'F')
+                c -= 'A' - 10;
+            else if (c >= 'a' && c <= 'f')
+                c -= 'a' - 10;
+            else
+                return -1;
+            psk[j / 2] = c << 4;
+            c = psKey[j + 1];
+            if (c >= '0' && c <= '9')
+                c -= '0';
+            else if (c >= 'A' && c <= 'F')
+                c -= 'A' - 10;
+            else if (c >= 'a' && c <= 'f')
+                c -= 'a' - 10;
+            else
+                return -1;
+            psk[j / 2] |= c;
         }
         // set mbedtls config
         ret = mbedtls_ssl_conf_psk(&ssl_client->ssl_conf, psk, psk_len,
-                 (const unsigned char *)pskIdent, strlen(pskIdent));
-        if (ret != 0) {
+                                   (const unsigned char *)pskIdent, strlen(pskIdent));
+        if (ret != 0)
+        {
             LT_EM(SSL, "mbedtls_ssl_conf_psk returned %d", ret);
             return handle_error(ret);
         }
-    } else {
+    }
+    else
+    {
         return -1;
     }
 
-    if (!insecure && cli_cert != NULL && cli_key != NULL) {
+    if (!insecure && cli_cert != NULL && cli_key != NULL)
+    {
         mbedtls_x509_crt_init(&ssl_client->client_cert);
         mbedtls_pk_init(&ssl_client->client_key);
 
         LT_IM(SSL, "Loading CRT cert");
 
         ret = mbedtls_x509_crt_parse(&ssl_client->client_cert, (const unsigned char *)cli_cert, strlen(cli_cert) + 1);
-        if (ret < 0) {
-        // free the client_cert in the case parse failed, otherwise, the old client_cert still in the heap memory, that lead to "out of memory" crash.
-        mbedtls_x509_crt_free(&ssl_client->client_cert);
+        if (ret < 0)
+        {
+            // free the client_cert in the case parse failed, otherwise, the old client_cert still in the heap memory, that lead to "out of memory" crash.
+            mbedtls_x509_crt_free(&ssl_client->client_cert);
             return handle_error(ret);
         }
 
         LT_IM(SSL, "Loading private key");
         ret = mbedtls_pk_parse_key(&ssl_client->client_key, (const unsigned char *)cli_key, strlen(cli_key) + 1, NULL, 0);
 
-        if (ret != 0) {
+        if (ret != 0)
+        {
             mbedtls_x509_crt_free(&ssl_client->client_cert); // cert+key are free'd in pair
             return handle_error(ret);
         }
@@ -688,84 +732,99 @@ Serial.printf("SO_SNDTIMEO = %d\n", hede);
     LT_IM(SSL, "Setting hostname for TLS session...");
 
     // Hostname set here should match CN in server certificate
-    if((ret = mbedtls_ssl_set_hostname(&ssl_client->ssl_ctx, hostname != NULL ? hostname : ipToString(ip).c_str())) != 0){
+    if ((ret = mbedtls_ssl_set_hostname(&ssl_client->ssl_ctx, hostname != NULL ? hostname : ipToString(ip).c_str())) != 0)
+    {
         return handle_error(ret);
     }
 
     mbedtls_ssl_conf_rng(&ssl_client->ssl_conf, mbedtls_ctr_drbg_random, &ssl_client->drbg_ctx);
 
-    if ((ret = mbedtls_ssl_setup(&ssl_client->ssl_ctx, &ssl_client->ssl_conf)) != 0) {
+    if ((ret = mbedtls_ssl_setup(&ssl_client->ssl_ctx, &ssl_client->ssl_conf)) != 0)
+    {
         return handle_error(ret);
     }
 
     ret = mbedtls_ssl_conf_max_frag_len(&ssl_client->ssl_conf, MBEDTLS_SSL_MAX_FRAG_LEN_1024);
 
-    mbedtls_ssl_set_bio(&ssl_client->ssl_ctx, &ssl_client->socket, mbedtls_net_send, mbedtls_net_recv, NULL );
+    mbedtls_ssl_set_bio(&ssl_client->ssl_ctx, &ssl_client->socket, mbedtls_net_send, mbedtls_net_recv, NULL);
 
     LT_IM(SSL, "Performing the SSL/TLS handshake...");
-    unsigned long handshake_start_time=millis();
-    while ((ret = mbedtls_ssl_handshake(&ssl_client->ssl_ctx)) != 0) {
-        if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
+    unsigned long handshake_start_time = millis();
+    while ((ret = mbedtls_ssl_handshake(&ssl_client->ssl_ctx)) != 0)
+    {
+        if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
+        {
             return handle_error(ret);
         }
-        if((millis()-handshake_start_time)>ssl_client->handshake_timeout)
+        if ((millis() - handshake_start_time) > ssl_client->handshake_timeout)
             return -1;
-        vTaskDelay(2);//2 ticks
+        vTaskDelay(2); // 2 ticks
     }
 
-
-    if (cli_cert != NULL && cli_key != NULL) {
+    if (cli_cert != NULL && cli_key != NULL)
+    {
         LT_DM(SSL, "Protocol is %s Ciphersuite is %s", mbedtls_ssl_get_version(&ssl_client->ssl_ctx), mbedtls_ssl_get_ciphersuite(&ssl_client->ssl_ctx));
-        if ((ret = mbedtls_ssl_get_record_expansion(&ssl_client->ssl_ctx)) >= 0) {
+        if ((ret = mbedtls_ssl_get_record_expansion(&ssl_client->ssl_ctx)) >= 0)
+        {
             LT_DM(SSL, "Record expansion is %d", ret);
-        } else {
+        }
+        else
+        {
             LT_EM(SSL, "Record expansion is unknown (compression)");
         }
     }
 
     LT_IM(SSL, "Verifying peer X.509 certificate...");
 
-    if ((flags = mbedtls_ssl_get_verify_result(&ssl_client->ssl_ctx)) != 0) {
+    if ((flags = mbedtls_ssl_get_verify_result(&ssl_client->ssl_ctx)) != 0)
+    {
         memset(buf, 0, sizeof(buf));
         mbedtls_x509_crt_verify_info(buf, sizeof(buf), "  ! ", flags);
         LT_EM(SSL, "Failed to verify peer certificate! verification info: %s", buf);
         return handle_error(ret);
-    } else {
+    }
+    else
+    {
         LT_IM(SSL, "Certificate verified.");
     }
-    
-    if (rootCABuff != NULL) {
+
+    if (rootCABuff != NULL)
+    {
         mbedtls_x509_crt_free(&ssl_client->ca_cert);
     }
 
-    if (cli_cert != NULL) {
+    if (cli_cert != NULL)
+    {
         mbedtls_x509_crt_free(&ssl_client->client_cert);
     }
 
-    if (cli_key != NULL) {
+    if (cli_key != NULL)
+    {
         mbedtls_pk_free(&ssl_client->client_key);
-    }    
+    }
 
     LT_IM(SSL, "Free internal heap after TLS %u", ESP.getFreeHeap());
 
     return ssl_client->socket;
 }
 
-
 void WiFiSSLClientBeken::stop_ssl_socket(sslclient_context *ssl_client, const char *rootCABuff, const char *cli_cert, const char *cli_key)
 {
     LT_IM(SSL, "Cleaning SSL connection.");
 
-    if (ssl_client->socket >= 0) {
+    if (ssl_client->socket >= 0)
+    {
         lwip_close(ssl_client->socket);
         ssl_client->socket = -1;
     }
 
     // avoid memory leak if ssl connection attempt failed
-    if (ssl_client->ssl_conf.ca_chain != NULL) {
+    if (ssl_client->ssl_conf.ca_chain != NULL)
+    {
         mbedtls_x509_crt_free(&ssl_client->ca_cert);
     }
-    if (ssl_client->ssl_conf.key_cert != NULL) {
+    if (ssl_client->ssl_conf.key_cert != NULL)
+    {
         mbedtls_x509_crt_free(&ssl_client->client_cert);
         mbedtls_pk_free(&ssl_client->client_key);
     }
@@ -773,27 +832,27 @@ void WiFiSSLClientBeken::stop_ssl_socket(sslclient_context *ssl_client, const ch
     mbedtls_ssl_config_free(&ssl_client->ssl_conf);
     mbedtls_ctr_drbg_free(&ssl_client->drbg_ctx);
     mbedtls_entropy_free(&ssl_client->entropy_ctx);
-    
+
     // save only interesting fields
     int handshake_timeout = ssl_client->handshake_timeout;
     int socket_timeout = ssl_client->socket_timeout;
 
     // reset embedded pointers to zero
     memset(ssl_client, 0, sizeof(sslclient_context));
-    
+
     ssl_client->handshake_timeout = handshake_timeout;
     ssl_client->socket_timeout = socket_timeout;
 }
-
 
 int WiFiSSLClientBeken::data_to_read(sslclient_context *ssl_client)
 {
     int ret, res;
     ret = mbedtls_ssl_read(&ssl_client->ssl_ctx, NULL, 0);
-    //LT_EM(SSL, "RET: %i",ret);   //for low level debug
+    // LT_EM(SSL, "RET: %i",ret);   //for low level debug
     res = mbedtls_ssl_get_bytes_avail(&ssl_client->ssl_ctx);
-    //LT_EM(SSL, "RES: %i",res);    //for low level debug
-    if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE && ret < 0) {
+    // LT_EM(SSL, "RES: %i",res);    //for low level debug
+    if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE && ret < 0)
+    {
         return handle_error(ret);
     }
 
@@ -802,23 +861,26 @@ int WiFiSSLClientBeken::data_to_read(sslclient_context *ssl_client)
 
 int WiFiSSLClientBeken::send_ssl_data(sslclient_context *ssl_client, const uint8_t *data, size_t len)
 {
-    LT_IM(SSL, "Writing HTTP request with %d bytes...", len); //for low level debug
+    LT_IM(SSL, "Writing HTTP request with %d bytes...", len); // for low level debug
     int ret = -1;
 
-    unsigned long write_start_time=millis();
+    unsigned long write_start_time = millis();
 
-    while ((ret = mbedtls_ssl_write(&ssl_client->ssl_ctx, data, len)) <= 0) {
-        if((millis()-write_start_time)>ssl_client->socket_timeout) {
+    while ((ret = mbedtls_ssl_write(&ssl_client->ssl_ctx, data, len)) <= 0)
+    {
+        if ((millis() - write_start_time) > ssl_client->socket_timeout)
+        {
             LT_IM(SSL, "SSL write timed out.");
             return -1;
         }
 
-        if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE && ret < 0) {
-            LT_IM(SSL, "Handling error %d", ret); //for low level debug
+        if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE && ret < 0)
+        {
+            LT_IM(SSL, "Handling error %d", ret); // for low level debug
             return handle_error(ret);
         }
-        
-        //wait for space to become available
+
+        // wait for space to become available
         vTaskDelay(2);
     }
 
@@ -827,23 +889,31 @@ int WiFiSSLClientBeken::send_ssl_data(sslclient_context *ssl_client, const uint8
 
 int WiFiSSLClientBeken::get_ssl_receive(sslclient_context *ssl_client, uint8_t *data, int length)
 {
-    //LT_DM(SSL,  "Reading HTTP response...");   //for low level debug
+    // LT_DM(SSL,  "Reading HTTP response...");   //for low level debug
     int ret = -1;
 
     ret = mbedtls_ssl_read(&ssl_client->ssl_ctx, data, length);
 
-    //LT_IM(SSL,  "%d bytes read", ret);   //for low level debug
+    // LT_IM(SSL,  "%d bytes read", ret);   //for low level debug
     return ret;
 }
 
-static bool parseHexNibble(char pb, uint8_t* res)
+static bool parseHexNibble(char pb, uint8_t *res)
 {
-    if (pb >= '0' && pb <= '9') {
-        *res = (uint8_t) (pb - '0'); return true;
-    } else if (pb >= 'a' && pb <= 'f') {
-        *res = (uint8_t) (pb - 'a' + 10); return true;
-    } else if (pb >= 'A' && pb <= 'F') {
-        *res = (uint8_t) (pb - 'A' + 10); return true;
+    if (pb >= '0' && pb <= '9')
+    {
+        *res = (uint8_t)(pb - '0');
+        return true;
+    }
+    else if (pb >= 'a' && pb <= 'f')
+    {
+        *res = (uint8_t)(pb - 'a' + 10);
+        return true;
+    }
+    else if (pb >= 'A' && pb <= 'F')
+    {
+        *res = (uint8_t)(pb - 'A' + 10);
+        return true;
     }
     return false;
 }
@@ -901,7 +971,7 @@ static bool parseHexNibble(char pb, uint8_t* res)
 
 //     // Calculate certificate's SHA256 fingerprint
 //     uint8_t fingerprint_remote[32];
-//     if(!get_peer_fingerprint(ssl_client, fingerprint_remote)) 
+//     if(!get_peer_fingerprint(ssl_client, fingerprint_remote))
 //         return false;
 
 //     // Check if fingerprints match
@@ -918,7 +988,7 @@ static bool parseHexNibble(char pb, uint8_t* res)
 //         return true;
 // }
 
-// bool WiFiSSLClientBeken::get_peer_fingerprint(sslclient_context *ssl_client, uint8_t sha256[32]) 
+// bool WiFiSSLClientBeken::get_peer_fingerprint(sslclient_context *ssl_client, uint8_t sha256[32])
 // {
 //     if (!ssl_client) {
 //         LT_DM(SSL, "Invalid ssl_client pointer");
